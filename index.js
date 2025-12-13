@@ -1,10 +1,10 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 // const admin = require("firebase-admin");
-// const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 // const decoded = Buffer.from(process.env.FB_SERVICE_KEY, "base64").toString(
 //   "utf-8"
 // );
@@ -44,6 +44,41 @@ const client = new MongoClient(process.env.MONGODB_URI, {
 });
 async function run() {
   try {
+
+    const db = client.db("bookDB");
+    const booksCollection = db.collection('books');
+    const ordersCollection = db.collection("orders");
+
+
+//book related apis here 
+app.get('/books',async (req,res)=>{
+  const result = await booksCollection.find({status: 'published'}).toArray();
+  res.send(result);
+})
+
+
+app.get('/books/latest',async(req,res)=>{
+  const result = await booksCollection.find({status:'published'}).sort({createdAt:-1}).limit(8).toArray();
+  res.send(result);
+})
+
+app.get('/books/:id',async (req,res)=>{
+  const id = req.params.id;
+  const result = await booksCollection.findOne({_id:new ObjectId(id)});
+  res.send(result);
+})
+
+//orders apis goes here 
+
+app.post('/orders', async (req,res)=>{
+  const order = req.body;
+  order.orderStatus = 'pending';
+  order.paymentStatus = 'unpaid';
+  order.createdAt = new Date();
+  const result = await ordersCollection.insertOne(order);
+  res.send(result);
+})
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
