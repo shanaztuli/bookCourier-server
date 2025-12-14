@@ -99,6 +99,29 @@ async function run() {
       const result = await booksCollection.insertOne(newBook);
       res.send(result);
     });
+//
+app.get("/books/librarian/:email", async (req, res) => {
+  const email = req.params.email;
+
+  const books = await booksCollection
+    .find({ librarianEmail: email })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  res.send(books);
+});
+//
+app.patch("/books/:id", async (req, res) => {
+  const id = req.params.id;
+  const updateData = req.body;
+
+  const result = await booksCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: updateData }
+  );
+
+  res.send(result);
+});
 
     //get role from  user collection
 
@@ -143,6 +166,10 @@ async function run() {
 
     app.post("/orders", async (req, res) => {
       const order = req.body;
+
+       if (!order.librarianEmail) {
+         return res.status(400).send({ message: "librarianEmail required" });
+       }
       order.orderStatus = "pending";
       order.paymentStatus = "unpaid";
       order.createdAt = new Date();
@@ -171,7 +198,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/order/pay:id", async (req, res) => {
+    app.patch("/order/pay/:id", async (req, res) => {
       const id = req.params.id;
 
       const result = await ordersCollection.updateOne(
@@ -181,6 +208,37 @@ async function run() {
 
       res.send(result);
     });
+    //LIBRARIAN APIS
+
+    app.get("/orders/librarian/:email", async (req, res) => {
+      const email = req.params.email;
+
+      const orders = await ordersCollection
+        .find({ librarianEmail: email })
+        .sort({ createdAt: -1 })
+        .toArray();
+
+      res.send(orders);
+    });
+
+ app.patch("/orders/status/:id", async (req, res) => {
+  const id = req.params.id;
+  const { status } = req.body;
+
+  const allowed = ["pending", "shipped", "delivered"];
+  if (!allowed.includes(status)) {
+    return res.status(400).send({ message: "Invalid status" });
+  }
+
+  const result = await ordersCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: { orderStatus: status } }
+  );
+
+  res.send(result);
+});
+
+
 
     //PAYMENT REALATED APIS
 
