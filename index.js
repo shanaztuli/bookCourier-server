@@ -180,7 +180,7 @@ app.patch("/books/:id", async (req, res) => {
     app.get("/orders/user/:email", async (req, res) => {
       const email = req.params.email;
       const result = await ordersCollection
-        .find({ email }) // ✅ MATCHES YOUR DATA
+        .find({ email }) 
         .sort({ createdAt: -1 })
         .toArray();
 
@@ -239,6 +239,70 @@ app.patch("/books/:id", async (req, res) => {
 });
 
 
+//admin apis 
+app.get("/admin/users", async (req, res) => {
+  const users = await usersCollection
+    .find({})
+    .sort({ createdAt: -1 })
+    .toArray();
+  res.send(users);
+});
+//
+app.patch("/admin/users/:id/role", async (req, res) => {
+  const { id } = req.params;
+  const { role } = req.body; 
+
+  const result = await usersCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: { role } }
+  );
+
+  res.send(result);
+});
+
+//
+
+app.get("/admin/books", async (req, res) => {
+  try {
+    const books = await booksCollection
+      .find()
+      .sort({ createdAt: -1 })
+      .toArray();
+    res.send(books);
+  } catch (err) {
+    res.status(500).send({ message: "Failed to fetch books" });
+  }
+});
+//
+app.patch("/admin/books/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    const result = await booksCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status } }
+    );
+    res.send(result);
+  } catch (err) {
+    res.status(500).send({ message: "Failed to update status" });
+  }
+});
+
+//
+app.delete("/admin/books/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Delete the book
+    await booksCollection.deleteOne({ _id: new ObjectId(id) });
+    // Delete all orders related to this book
+    await ordersCollection.deleteMany({ bookId: id });
+    res.send({ message: "Book and its orders deleted successfully" });
+  } catch (err) {
+    res.status(500).send({ message: "Failed to delete book" });
+  }
+});
 
     //PAYMENT REALATED APIS
 
