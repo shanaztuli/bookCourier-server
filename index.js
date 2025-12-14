@@ -70,6 +70,36 @@ async function run() {
       res.send(result);
     });
 
+    //
+    app.post("/books", async (req, res) => {
+      const book = req.body;
+
+      if (!book.title || !book.author || !book.price || !book.librarianEmail) {
+        return res.status(400).send({ message: "Required fields missing" });
+      }
+
+      const newBook = {
+        title: book.title,
+        author: book.author,
+        description: book.description || "",
+        image: book.image || "",
+        price: Number(book.price),
+        category: book.category || "",
+        isbn: book.isbn || "",
+        pages: Number(book.pages) || 0,
+        language: book.language || "",
+        publisher: book.publisher || "",
+        rating: book.rating || 0,
+        reviewsCount: book.reviewsCount || 0,
+        status: book.status || "unpublished",
+        librarianEmail: book.librarianEmail,
+        createdAt: new Date(),
+      };
+
+      const result = await booksCollection.insertOne(newBook);
+      res.send(result);
+    });
+
     //get role from  user collection
 
     app.post("/users", async (req, res) => {
