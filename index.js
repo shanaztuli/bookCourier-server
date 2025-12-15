@@ -46,6 +46,7 @@ async function run() {
     const wishlistCollection = db.collection("wishlist");
     const usersCollection = db.collection("users");
     const paymentsCollection = db.collection("payments");
+const reviewsCollection = db.collection("reviews");
 
     //book related apis here
     app.get("/books", async (req, res) => {
@@ -99,29 +100,29 @@ async function run() {
       const result = await booksCollection.insertOne(newBook);
       res.send(result);
     });
-//
-app.get("/books/librarian/:email", async (req, res) => {
-  const email = req.params.email;
+    //
+    app.get("/books/librarian/:email", async (req, res) => {
+      const email = req.params.email;
 
-  const books = await booksCollection
-    .find({ librarianEmail: email })
-    .sort({ createdAt: -1 })
-    .toArray();
+      const books = await booksCollection
+        .find({ librarianEmail: email })
+        .sort({ createdAt: -1 })
+        .toArray();
 
-  res.send(books);
-});
-//
-app.patch("/books/:id", async (req, res) => {
-  const id = req.params.id;
-  const updateData = req.body;
+      res.send(books);
+    });
+    //
+    app.patch("/books/:id", async (req, res) => {
+      const id = req.params.id;
+      const updateData = req.body;
 
-  const result = await booksCollection.updateOne(
-    { _id: new ObjectId(id) },
-    { $set: updateData }
-  );
+      const result = await booksCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updateData }
+      );
 
-  res.send(result);
-});
+      res.send(result);
+    });
 
     //get role from  user collection
 
@@ -162,14 +163,31 @@ app.patch("/books/:id", async (req, res) => {
       const result = await wishlistCollection.insertOne(wishlistItem);
       res.send(result);
     });
+
+    // Get wishlist by user
+    app.get("/wishlist", async (req, res) => {
+      const email = req.query.email;
+
+      if (!email) {
+        return res.status(400).send({ message: "Email is required" });
+      }
+
+      const wishlist = await wishlistCollection
+        .find({ userEmail: email })
+        .sort({ createdAt: -1 })
+        .toArray();
+
+      res.send(wishlist);
+    });
+
     //orders apis goes here
 
     app.post("/orders", async (req, res) => {
       const order = req.body;
 
-       if (!order.librarianEmail) {
-         return res.status(400).send({ message: "librarianEmail required" });
-       }
+      if (!order.librarianEmail) {
+        return res.status(400).send({ message: "librarianEmail required" });
+      }
       order.orderStatus = "pending";
       order.paymentStatus = "unpaid";
       order.createdAt = new Date();
@@ -180,7 +198,7 @@ app.patch("/books/:id", async (req, res) => {
     app.get("/orders/user/:email", async (req, res) => {
       const email = req.params.email;
       const result = await ordersCollection
-        .find({ email }) 
+        .find({ email })
         .sort({ createdAt: -1 })
         .toArray();
 
@@ -221,88 +239,87 @@ app.patch("/books/:id", async (req, res) => {
       res.send(orders);
     });
 
- app.patch("/orders/status/:id", async (req, res) => {
-  const id = req.params.id;
-  const { status } = req.body;
+    app.patch("/orders/status/:id", async (req, res) => {
+      const id = req.params.id;
+      const { status } = req.body;
 
-  const allowed = ["pending", "shipped", "delivered"];
-  if (!allowed.includes(status)) {
-    return res.status(400).send({ message: "Invalid status" });
-  }
+      const allowed = ["pending", "shipped", "delivered"];
+      if (!allowed.includes(status)) {
+        return res.status(400).send({ message: "Invalid status" });
+      }
 
-  const result = await ordersCollection.updateOne(
-    { _id: new ObjectId(id) },
-    { $set: { orderStatus: status } }
-  );
+      const result = await ordersCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { orderStatus: status } }
+      );
 
-  res.send(result);
-});
+      res.send(result);
+    });
 
+    //admin apis
+    app.get("/admin/users", async (req, res) => {
+      const users = await usersCollection
+        .find({})
+        .sort({ createdAt: -1 })
+        .toArray();
+      res.send(users);
+    });
+    //
+    app.patch("/admin/users/:id/role", async (req, res) => {
+      const { id } = req.params;
+      const { role } = req.body;
 
-//admin apis 
-app.get("/admin/users", async (req, res) => {
-  const users = await usersCollection
-    .find({})
-    .sort({ createdAt: -1 })
-    .toArray();
-  res.send(users);
-});
-//
-app.patch("/admin/users/:id/role", async (req, res) => {
-  const { id } = req.params;
-  const { role } = req.body; 
+      const result = await usersCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { role } }
+      );
 
-  const result = await usersCollection.updateOne(
-    { _id: new ObjectId(id) },
-    { $set: { role } }
-  );
+      res.send(result);
+    });
 
-  res.send(result);
-});
+    //
 
-//
+    app.get("/admin/books", async (req, res) => {
+      try {
+        const books = await booksCollection
+          .find()
+          .sort({ createdAt: -1 })
+          .toArray();
+        res.send(books);
+      } catch (err) {
+        res.status(500).send({ message: "Failed to fetch books" });
+      }
+    });
+    //
+    app.patch("/admin/books/:id/status", async (req, res) => {
+      const { id } = req.params;
+      const { status } = req.body;
 
-app.get("/admin/books", async (req, res) => {
-  try {
-    const books = await booksCollection
-      .find()
-      .sort({ createdAt: -1 })
-      .toArray();
-    res.send(books);
-  } catch (err) {
-    res.status(500).send({ message: "Failed to fetch books" });
-  }
-});
-//
-app.patch("/admin/books/:id/status", async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
+      try {
+        const result = await booksCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { status } }
+        );
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: "Failed to update status" });
+      }
+    });
 
-  try {
-    const result = await booksCollection.updateOne(
-      { _id: new ObjectId(id) },
-      { $set: { status } }
-    );
-    res.send(result);
-  } catch (err) {
-    res.status(500).send({ message: "Failed to update status" });
-  }
-});
+    //
+    app.delete("/admin/books/:id", async (req, res) => {
+      const { id } = req.params;
 
-//
-app.delete("/admin/books/:id", async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    // Delete the book
-    await booksCollection.deleteOne({ _id: new ObjectId(id) });
-    // Delete all orders related to this book
-    await ordersCollection.deleteMany({ bookId: id });
-    res.send({ message: "Book and its orders deleted successfully" });
-  } catch (err) {
-    res.status(500).send({ message: "Failed to delete book" });
-  }
-});
+      try {
+        // Delete the book
+        await booksCollection.deleteOne({ _id: new ObjectId(id) });
+      
+        await ordersCollection.deleteMany({ bookId: id });
+        res.send({ message: "Book and its orders deleted successfully" });
+      } catch (err) {
+        res.status(500).send({ message: "Failed to delete book" });
+      }
+    });
 
     //PAYMENT REALATED APIS
 
@@ -342,61 +359,59 @@ app.delete("/admin/books/:id", async (req, res) => {
     });
 
     //
-  app.patch("/order-payment-success", async (req, res) => {
-    const sessionId = req.query.session_id;
+    app.patch("/order-payment-success", async (req, res) => {
+      const sessionId = req.query.session_id;
 
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-    if (session.payment_status !== "paid") {
-      return res.status(400).send({ message: "Payment not completed" });
-    }
+      if (session.payment_status !== "paid") {
+        return res.status(400).send({ message: "Payment not completed" });
+      }
 
-    const transactionId = session.payment_intent;
-    const orderId = session.metadata.orderId;
+      const transactionId = session.payment_intent;
+      const orderId = session.metadata.orderId;
 
-    // 🔒 1️⃣ Prevent duplicate payment save
-    const existingPayment = await paymentsCollection.findOne({
-      transactionId,
-    });
-
-    if (existingPayment) {
-      return res.send({
-        success: true,
-        message: "Payment already recorded",
+      const existingPayment = await paymentsCollection.findOne({
         transactionId,
       });
-    }
 
-    // 2️⃣ Update order
-    await ordersCollection.updateOne(
-      { _id: new ObjectId(orderId) },
-      {
-        $set: {
-          paymentStatus: "paid",
-          orderStatus: "processing",
-        },
+      if (existingPayment) {
+        return res.send({
+          success: true,
+          message: "Payment already recorded",
+          transactionId,
+        });
       }
-    );
 
-    // 3️⃣ Save payment (ONCE)
-    const payment = {
-      orderId: new ObjectId(orderId),
-      email: session.customer_email,
-      amount: session.amount_total / 100,
-      currency: session.currency,
-      transactionId,
-      paymentStatus: session.payment_status,
-      paidAt: new Date(),
-    };
+      // 2️Update order
+      await ordersCollection.updateOne(
+        { _id: new ObjectId(orderId) },
+        {
+          $set: {
+            paymentStatus: "paid",
+            orderStatus: "processing",
+          },
+        }
+      );
 
-    await paymentsCollection.insertOne(payment);
+      // 3️ Save payment (ONCE)
+      const payment = {
+        orderId: new ObjectId(orderId),
+        email: session.customer_email,
+        amount: session.amount_total / 100,
+        currency: session.currency,
+        transactionId,
+        paymentStatus: session.payment_status,
+        paidAt: new Date(),
+      };
 
-    res.send({
-      success: true,
-      transactionId,
+      await paymentsCollection.insertOne(payment);
+
+      res.send({
+        success: true,
+        transactionId,
+      });
     });
-  });
-
 
     //
 
@@ -458,6 +473,7 @@ app.delete("/admin/books/:id", async (req, res) => {
 
       res.send(payments);
     });
+//reviews api 
 
 
     // Send a ping to confirm a successful connection
