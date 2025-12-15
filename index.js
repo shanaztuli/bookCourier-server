@@ -7,15 +7,18 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 
 const crypto = require("crypto");
-// const admin = require("firebase-admin");
 const port = process.env.PORT || 3000;
-// const decoded = Buffer.from(process.env.FB_SERVICE_KEY, "base64").toString(
-//   "utf-8"
-// );
-// const serviceAccount = JSON.parse(decoded);
-// admin.initializeApp({
-//   credential: admin.credential.cert(serviceAccount),
-// });
+
+
+//min
+
+const admin = require("firebase-admin");
+
+const serviceAccount = require("./bookcourier-firebase-adminsdk.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
 
 const app = express();
 // middleware
@@ -29,6 +32,25 @@ app.use(
 app.use(express.json());
 
 // jwt middlewares
+const verifyFirebaseToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).send({ message: "Unauthorized" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decodedUser = await admin.auth().verifyIdToken(token);
+    req.user = decodedUser;
+    next();
+  } catch (error) {
+    return res.status(401).send({ message: "Invalid token" });
+  }
+};
+
+
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(process.env.MONGODB_URI, {
@@ -48,6 +70,26 @@ async function run() {
     const paymentsCollection = db.collection("payments");
 const reviewsCollection = db.collection("reviews");
 
+
+
+const verifyAdmin = async (req, res, next) => {
+  const user = await usersCollection.findOne({ email: req.user.email });
+
+  if (!user || user.role !== "admin") {
+    return res.status(403).send({ message: "Admin only access" });
+  }
+
+  next();
+};
+const verifyLibrarian = async (req, res, next) => {
+  const user = await usersCollection.findOne({ email: req.user.email });
+
+  if (!user || user.role !== "librarian") {
+    return res.status(403).send({ message: "Librarian only access" });
+  }
+
+  next();
+};
     //book related apis here
     app.get("/books", async (req, res) => {
       const result = await booksCollection
@@ -195,7 +237,12 @@ const reviewsCollection = db.collection("reviews");
       res.send(result);
     });
 
-    app.get("/orders/user/:email", async (req, res) => {
+    app.get("/orders/user/:email",verifyFirebaseToken, async (req, res) => {
+
+       if (req.user.email !== req.params.email) {
+         return res.status(403).send({ message: "Forbidden" });
+       } 
+
       const email = req.params.email;
       const result = await ordersCollection
         .find({ email })
@@ -228,16 +275,23 @@ const reviewsCollection = db.collection("reviews");
     });
     //LIBRARIAN APIS
 
-    app.get("/orders/librarian/:email", async (req, res) => {
-      const email = req.params.email;
+    app.get(
+      "/orders/librarian/:email",
+      verifyFirebaseToken,
+      verifyLibrarian,
+      async (req, res) => {
+        const email = req.params.email;
+    if (req.user.email !== req.params.email) {
+   return res.status(403).send({ message: "Forbidden" });
+ }
+        const orders = await ordersCollection
+          .find({ librarianEmail: email })
+          .sort({ createdAt: -1 })
+          .toArray();
 
-      const orders = await ordersCollection
-        .find({ librarianEmail: email })
-        .sort({ createdAt: -1 })
-        .toArray();
-
-      res.send(orders);
-    });
+        res.send(orders);
+      }
+    );
 
     app.patch("/orders/status/:id", async (req, res) => {
       const id = req.params.id;
@@ -257,25 +311,35 @@ const reviewsCollection = db.collection("reviews");
     });
 
     //admin apis
-    app.get("/admin/users", async (req, res) => {
-      const users = await usersCollection
-        .find({})
-        .sort({ createdAt: -1 })
-        .toArray();
-      res.send(users);
-    });
+    app.get(
+      "/admin/users",
+      verifyFirebaseToken,
+      verifyAdmin,
+      async (req, res) => {
+        const users = await usersCollection
+          .find({})
+          .sort({ createdAt: -1 })
+          .toArray();
+        res.send(users);
+      }
+    );
     //
-    app.patch("/admin/users/:id/role", async (req, res) => {
-      const { id } = req.params;
-      const { role } = req.body;
+    app.patch(
+      "/admin/users/:id/role",
+      verifyFirebaseToken,
+      verifyAdmin,
+      async (req, res) => {
+        const { id } = req.params;
+        const { role } = req.body;
 
-      const result = await usersCollection.updateOne(
-        { _id: new ObjectId(id) },
-        { $set: { role } }
-      );
+        const result = await usersCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { role } }
+        );
 
-      res.send(result);
-    });
+        res.send(result);
+      }
+    );
 
     //
 
@@ -459,7 +523,7 @@ const reviewsCollection = db.collection("reviews");
     ///inconvience
 
     //
-    app.get("/payments", async (req, res) => {
+    app.get("/payments",verifyFirebaseToken, async (req, res) => {
       const email = req.query.email;
 
       if (!email) {
