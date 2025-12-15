@@ -474,7 +474,74 @@ const reviewsCollection = db.collection("reviews");
       res.send(payments);
     });
 //reviews api 
+app.get("/reviews/can-review", async (req, res) => {
+  const { bookId, email } = req.query;
 
+  if (!bookId || !email) {
+    return res.status(400).send({ message: "Missing data" });
+  }
+
+  const order = await ordersCollection.findOne({
+    bookId,
+    email,
+    paymentStatus: "paid",
+  });
+
+  res.send({ canReview: !!order });
+});
+//
+app.post("/reviews", async (req, res) => {
+  const { bookId, rating, review, userEmail, userName } = req.body;
+
+  if (!bookId || !rating || !userEmail) {
+    return res.status(400).send({ message: "Required fields missing" });
+  }
+
+  const exists = await reviewsCollection.findOne({ bookId, userEmail });
+  if (exists) {
+    return res.status(400).send({ message: "Already reviewed" });
+  }
+
+  const newReview = {
+    bookId,
+    rating: Number(rating),
+    review: review || "",
+    userEmail,
+    userName,
+    createdAt: new Date(),
+  };
+
+  await reviewsCollection.insertOne(newReview);
+
+  //  Update book rating
+  const reviews = await reviewsCollection.find({ bookId }).toArray();
+  const avgRating =
+    reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+
+  await booksCollection.updateOne(
+    { _id: new ObjectId(bookId) },
+    {
+      $set: {
+        rating: Number(avgRating.toFixed(1)),
+        reviewsCount: reviews.length,
+      },
+    }
+  );
+
+  res.send({ success: true });
+});
+
+//
+app.get("/reviews/:bookId", async (req, res) => {
+  const bookId = req.params.bookId;
+
+  const reviews = await reviewsCollection
+    .find({ bookId })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  res.send(reviews);
+});
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
