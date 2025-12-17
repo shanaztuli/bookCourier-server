@@ -70,32 +70,38 @@ async function run() {
   try {
     const db = client.db("bookDB");
     const booksCollection = db.collection("books");
-    const ordersCollection = db.collection("orders");
-    const wishlistCollection = db.collection("wishlist");
-    const usersCollection = db.collection("users");
-    const paymentsCollection = db.collection("payments");
-const reviewsCollection = db.collection("reviews");
+ const ordersCollection = db.collection("orders");
+ const wishlistCollection = db.collection("wishlist");
+ const usersCollection = db.collection("users");
+ const paymentsCollection = db.collection("payments");
+ const reviewsCollection = db.collection("reviews");
+
+ 
+    const verifyAdmin = async (req, res, next) => {
+      const user = await usersCollection.findOne({ email: req.user.email });
+
+      if (!user || user.role !== "admin") {
+        return res.status(403).send({ message: "Admin only access" });
+      }
+
+      next();
+    };
+
+    const verifyLibrarian = async (req, res, next) => {
+      const user = await usersCollection.findOne({ email: req.user.email });
+
+      if (!user || user.role !== "librarian") {
+        return res.status(403).send({ message: "Librarian only access" });
+      }
+
+      next();
+    };
+   
 
 
 
-const verifyAdmin = async (req, res, next) => {
-  const user = await usersCollection.findOne({ email: req.user.email });
 
-  if (!user || user.role !== "admin") {
-    return res.status(403).send({ message: "Admin only access" });
-  }
 
-  next();
-};
-const verifyLibrarian = async (req, res, next) => {
-  const user = await usersCollection.findOne({ email: req.user.email });
-
-  if (!user || user.role !== "librarian") {
-    return res.status(403).send({ message: "Librarian only access" });
-  }
-
-  next();
-};
     //book related apis here
     app.get("/books", async (req, res) => {
       const result = await booksCollection
@@ -349,17 +355,22 @@ const verifyLibrarian = async (req, res, next) => {
 
     //
 
-    app.get("/admin/books", async (req, res) => {
-      try {
-        const books = await booksCollection
-          .find()
-          .sort({ createdAt: -1 })
-          .toArray();
-        res.send(books);
-      } catch (err) {
-        res.status(500).send({ message: "Failed to fetch books" });
+    app.get(
+      "/admin/books",
+      verifyFirebaseToken,
+      verifyAdmin,
+      async (req, res) => {
+        try {
+          const books = await booksCollection
+            .find()
+            .sort({ createdAt: -1 })
+            .toArray();
+          res.send(books);
+        } catch (err) {
+          res.status(500).send({ message: "Failed to fetch books" });
+        }
       }
-    });
+    );
     //
     app.patch("/admin/books/:id/status", async (req, res) => {
       const { id } = req.params;
@@ -485,19 +496,19 @@ const verifyLibrarian = async (req, res, next) => {
 
     //
 
-    app.patch("/orders/cancel/:id", async (req, res) => {
-      const id = req.params.id;
+    // app.patch("/orders/cancel/:id", async (req, res) => {
+    //   const id = req.params.id;
 
-      const query = { _id: new ObjectId(id) };
-      const update = {
-        $set: {
-          orderStatus: "cancelled",
-        },
-      };
+    //   const query = { _id: new ObjectId(id) };
+    //   const update = {
+    //     $set: {
+    //       orderStatus: "cancelled",
+    //     },
+    //   };
 
-      const result = await ordersCollection.updateOne(query, update);
-      res.send(result);
-    });
+    //   const result = await ordersCollection.updateOne(query, update);
+    //   res.send(result);
+    // });
 
     ///current user profile change api
 
