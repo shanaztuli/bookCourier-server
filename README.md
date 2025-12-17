@@ -8,6 +8,9 @@ Server Side: https://github.com/shanaztuli/bookCourier-server
 🔐 Admin Credentials
 **Admin Email:**simlaloskor@gmail.com
 Admin Password: 331312aA@
+
+
+
 🎯 Project Purpose
 BookCourier is a full-stack library delivery management system that allows users to order books from nearby libraries and get them delivered to their homes. The platform supports role-based dashboards for users, librarians, and admins, ensuring secure, efficient, and user-friendly book ordering and management.
 
@@ -20,6 +23,8 @@ Secure role-based dashboards
 JWT protected API routes using Firebase token verification
 Wishlist and review system
 Stripe payment integration
+
+
 🏠 Home Page
 Banner with 3 sliders (book image, title, description, CTA)
 Latest Books section (recently added books)
@@ -27,6 +32,8 @@ Coverage section with delivery map
 Why Choose BookCourier section
 At least 1 animated section
 2 additional well-designed sections
+
+
 📚 Books Section
 All Books
 Displays all published books
@@ -42,6 +49,8 @@ Email (readonly)
 Phone number
 Address
 Review & rating system (only after paid order)
+
+
 👤 User Dashboard
 My Orders
 View order status
@@ -64,6 +73,8 @@ View orders for librarian’s books
 Update order status:
 Pending → Shipped → Delivered
 Cancel orders if needed
+
+
 🛠 Admin Dashboard
 All Users
 View all registered users
@@ -83,15 +94,21 @@ Environment variables used for:
 Firebase service key
 MongoDB credentials
 Stripe secret key
+
+
 💳 Payment System
 Stripe Checkout integration
 Secure payment handling
 Automatic order status update after payment
 Payment records stored in database
+
+
 ⭐ Review & Rating System
 Only users with paid orders can submit reviews
 Average rating calculated dynamically
 Reviews visible on book details page
+
+
 🧪 Technologies Used
 Frontend
 React
@@ -110,6 +127,8 @@ Stripe
 JWT (Firebase token verification)
 dotenv
 CORS
+
+
 🚀 Deployment
 Client: Vercel / Netlify
 Server: Vercel / Render
@@ -124,6 +143,8 @@ Private routes persist authentication on refresh
 Wishlist functionality
 Dark/Light theme
 Clean, recruiter-friendly UI
+
+
 👨‍💻 Author
 **Name:**shanaz **Email:**shanazparbinloskortuli@gmail.com
 
