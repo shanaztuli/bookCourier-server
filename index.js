@@ -14,7 +14,7 @@ const port = process.env.PORT || 3000;
 
 const admin = require("firebase-admin");
 
-const serviceAccount = require("./bookcourier-firebase-adminsdk.json");
+// const serviceAccount = require("./bookcourier-firebase-adminsdk.json");
 
 
 //MIN
