@@ -30,7 +30,7 @@ const app = express();
 // middleware
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "https://bookcourier12.netlify.app",
     credentials: true,
   })
 );
@@ -76,7 +76,7 @@ async function run() {
  const paymentsCollection = db.collection("payments");
  const reviewsCollection = db.collection("reviews");
 
- 
+
     const verifyAdmin = async (req, res, next) => {
       const user = await usersCollection.findOne({ email: req.user.email });
 
